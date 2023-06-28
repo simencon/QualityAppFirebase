@@ -27,18 +27,28 @@ const db = admin.firestore();
 // [START v2ValidateNewUser]
 // [START v2beforeCreateFunctionTrigger]
 // Block account creation with any non-acme email address.
-exports.validatenewuser = beforeUserCreated((event) => {
+exports.validatenewuser = beforeUserCreated(async (event) => {
   // [END v2beforeCreateFunctionTrigger]
   // [START v2readUserData]
   // User data passed in from the CloudEvent.
   const user = event.data;
+  // Email passed from the CloudEvent.
+  const email = event.data.email || "";
   // [END v2readUserData]
 
   // [START v2domainHttpsError]
-  // Only users of a specific domain can sign up.
-  if (!user.email.includes("@skf.com")) {
-    // Throw an HttpsError so that Firebase Auth rejects the account creation.
-    throw new HttpsError("invalid-argument", "Unauthorized email");
+  // Only users from whitelist or of a specific domain can sign up.
+  const doc = await db
+      .collection("whitelist")
+      .where("company", "==", "skf").get;
+  console.log("skf list", doc);
+  const allowed = await doc
+      .collection("externalEmail").doc(email).get();
+  if (!allowed.exists) {
+    if (!user.email.includes("@skf.com")) {
+      // Throw an HttpsError so that Firebase Auth rejects the account creation.
+      throw new HttpsError("invalid-argument", "Unauthorized email");
+    }
   }
   // [END v2domainHttpsError]
 });
@@ -113,6 +123,7 @@ exports.addRequest = functions.https.onCall(async (data, context) => {
     upvote: 0,
   })
       .then((doc) => {
+        console.log("doc", doc);
         return {
           result: doc,
         };
