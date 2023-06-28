@@ -38,18 +38,41 @@ exports.validatenewuser = beforeUserCreated(async (event) => {
 
   // [START v2domainHttpsError]
   // Only users from whitelist or of a specific domain can sign up.
-  const doc = await db
+  let allowed = false;
+  await db
       .collection("whitelist")
-      .where("company", "==", "skf").get;
-  console.log("skf list", doc);
-  const allowed = await doc
-      .collection("externalEmail").doc(email).get();
-  if (!allowed.exists) {
-    if (!user.email.includes("@skf.com")) {
-      // Throw an HttpsError so that Firebase Auth rejects the account creation.
-      throw new HttpsError("invalid-argument", "Unauthorized email");
-    }
-  }
+      .where("company", "==", "skf")
+      .get()
+      .then((value) => {
+        value.forEach(async (result) => {
+          console.log("result is", result.data());
+          console.log("result is", result.id);
+          await db
+              .collection("whitelist")
+              .doc(result.id)
+              .collection("externalEmail")
+              .get()
+              .then((values) => {
+                values.forEach((doc) => {
+                  console.log("list of emails", doc.data());
+                  if (doc.data().email === email) {
+                    console.log("found email", doc.data());
+                    allowed = true;
+                  } else {
+                    console.log("not found email");
+                  }
+                });
+                if (allowed !== true) {
+                  if (!user.email.includes("@skf.com")) {
+                    // Throw an HttpsError so that
+                    // Firebase Auth rejects the account creation.
+                    throw new HttpsError(
+                        "invalid-argument", "Unauthorized email");
+                  }
+                }
+              });
+        });
+      });
   // [END v2domainHttpsError]
 });
 // [END v2ValidateNewUser]
