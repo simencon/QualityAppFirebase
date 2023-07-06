@@ -1,19 +1,3 @@
-/**
- * Copyright 2022 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 const {
   beforeUserCreated,
   beforeUserSignedIn,
@@ -24,107 +8,68 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
 
-// [START v2ValidateNewUser]
-// [START v2beforeCreateFunctionTrigger]
-// Block account creation with any non-acme email address.
 exports.validatenewuser = beforeUserCreated(async (event) => {
-  // [END v2beforeCreateFunctionTrigger]
-  // [START v2readUserData]
-  // User data passed in from the CloudEvent.
-  const user = event.data;
-  // Email passed from the CloudEvent.
+  const company = "skf";
   const email = event.data.email || "";
-  // [END v2readUserData]
 
-  // [START v2domainHttpsError]
-  // Only users from whitelist or of a specific domain can sign up.
-  let allowed = false;
-  await db
-      .collection("whitelist")
-      .where("company", "==", "skf")
-      .get()
-      .then((value) => {
-        value.forEach(async (result) => {
-          console.log("result is", result.data());
-          console.log("result is", result.id);
-          await db
-              .collection("whitelist")
-              .doc(result.id)
-              .collection("externalEmail")
-              .get()
-              .then((values) => {
-                values.forEach((doc) => {
-                  console.log("list of emails", doc.data());
-                  if (doc.data().email === email) {
-                    console.log("found email", doc.data());
-                    allowed = true;
-                  } else {
-                    console.log("not found email");
-                  }
-                });
-                if (allowed !== true) {
-                  if (!user.email.includes("@skf.com")) {
-                    // Throw an HttpsError so that
-                    // Firebase Auth rejects the account creation.
-                    throw new HttpsError(
-                        "invalid-argument", "Unauthorized email");
-                  }
-                }
-              });
-        });
-      });
-  // [END v2domainHttpsError]
-});
-// [END v2ValidateNewUser]
-
-// [START v2CheckForBan]
-// [START v2beforeSignInFunctionTrigger]
-// Block account sign in with any banned account.
-exports.checkforban = beforeUserSignedIn(async (event) => {
-  // [END v2beforeSignInFunctionTrigger]
-  // [START v2readEmailData]
-  // Email passed from the CloudEvent.
-  const email = event.data.email || "";
-  // [END v2readEmailData]
-
-  // [START v2documentGet]
-  // Obtain a document in Firestore of the banned email address.
-  const doc = await db.collection("banned").doc(email).get();
-  // [END v2documentGet]
-
-  // [START v2bannedHttpsError]
-  // Checking that the document exists for the email address.
-  if (doc.exists) {
-    // Throw an HttpsError so that Firebase Auth rejects the account sign in.
-    throw new HttpsError("invalid-argument", "Unauthorized email");
+  const externalEmails = await db
+      .collection("companies")
+      .doc(company)
+      .collection("externalEmails")
+      .where("email", "==", email)
+      .get();
+  if (externalEmails.empty && !email.includes("@skf.com")) {
+    throw new HttpsError(
+        "invalid-argument", "Unauthorized email");
   }
-  // [END v2bannedHttpsError]
 });
-// [START v2CheckForBan]
+
+exports.checkforban = beforeUserSignedIn(async (event) => {
+  const company = "skf";
+  const email = event.data.email || "";
+  const bannedEmails = await db
+      .collection("companies")
+      .doc(company)
+      .collection("bannedEmails")
+      .where("email", "==", email)
+      .get();
+
+  if (!bannedEmails.empty) {
+    throw new HttpsError("invalid-argument", "User has been disabled");
+  }
+});
 
 const functions = require("firebase-functions");
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
-  console.log("user created", user.email, user.uid);
-  return db.collection("users").doc(user.uid).set({
-    email: user.email,
-    userDisplayName: user.displayName,
-    userCompany: null,
-    userDepartment: null,
-    userSubDepartment: null,
-    userJobRole: [],
-    userReadLevel: 0,
-    userWriteLevel: 0,
-    restApiUrl: null,
-    userDevicesTokens: [],
-    userPasswordSalt: user.passwordSalt,
-    userPasswordHash: user.passwordHash,
-  });
+  const company = "skf";
+  return db.collection("companies")
+      .doc(company)
+      .collection("users")
+      .doc(user.uid)
+      .set({
+        email: user.email,
+        userDisplayName: user.displayName,
+        userCompany: null,
+        userDepartment: null,
+        userSubDepartment: null,
+        userJobRole: [],
+        userReadLevel: 0,
+        userWriteLevel: 0,
+        restApiUrl: null,
+        userDevicesTokens: [],
+        userPasswordSalt: user.passwordSalt,
+        userPasswordHash: user.passwordHash,
+      });
 });
 
 exports.userDeleted = functions.auth.user().onDelete((user) => {
-  console.log("user created", user.email, user.uid);
-  const doc = db.collection("users").doc(user.uid);
+  const company = "skf";
+  const doc = db
+      .collection("companies")
+      .doc(company)
+      .collection("users")
+      .doc(user.uid);
   return doc.delete();
 });
 
@@ -149,6 +94,61 @@ exports.addRequest = functions.https.onCall(async (data, context) => {
         console.log("doc", doc);
         return {
           result: doc,
+        };
+      });
+});
+
+exports.updateUserData = functions.https.onCall( async (data, context) => {
+  if (!context.auth.uid) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "only authenticated users can add request",
+    );
+  }
+  if (data.userJobRole.length > 30) {
+    throw new functions.https.HttpsError(
+        "invalid-argument",
+        "request must be no more than 30 characters long",
+    );
+  }
+  const snapshot = await db.collection("companies")
+      .doc("skf")
+      .collection("users")
+      .where("email", "==", data.email)
+      .get();
+  const updatePromises = [];
+  const userJobRoles = [];
+  data.userJobRole.forEach( (role) => {
+    console.log("role", role);
+    userJobRoles.push(role);
+  },
+  );
+  snapshot.forEach( (doc) => {
+    updatePromises.push(
+        db
+            .collection("companies")
+            .doc("skf")
+            .collection("users")
+            .doc(doc.id)
+            .update({
+              userDisplayName: data.userDisplayName,
+              userDepartment: data.userDepartment,
+              userSubDepartment: data.userSubDepartment,
+              userJobRole: [userJobRoles],
+            }),
+    );
+  },
+  );
+  return Promise
+      .all(updatePromises)
+      .then((timeStamp) => {
+        return {
+          result: "user data updated",
+          email: data.email,
+          fullName: data.userDisplayName,
+          department: data.userDepartment,
+          subDepartment: data.userSubDepartment,
+          jobRoles: [userJobRoles],
         };
       });
 });
