@@ -190,18 +190,24 @@ exports.getUserData = functions.https.onCall( (data, context) => {
 
 const axios = require("axios");
 
+const UserModel = require("./models/UserModel");
+
 exports.createFirebaseUser = functions
     .firestore.document("companies/skf/users/{fullName}")
     .onUpdate((snap, context) => {
       const userData = snap.after.data();
-      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", {
-        department: userData.department,
-        email: userData.email,
-        fullName: userData.fullName,
-        jobRole: userData.jobRole,
-        subDepartment: userData.subDepartment,
-        userUid: userData.userUid,
-      })
+      const userToPost = new UserModel();
+
+      userToPost.user.email = userData.email;
+      userToPost.user.fullName = userData.fullName;
+      userToPost.user.department = userData.department;
+      userToPost.user.subDepartment = userData.subDepartment;
+      userToPost.user.jobRole = userData.jobRole;
+      userToPost.user.userUid = userData.userUid;
+
+      console.log("before post", userToPost.getUser());
+
+      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", userToPost.getUser())
           .then((response) => {
             console.log("response code is: ", response.status);
             console.log("response is: ", response.data);
