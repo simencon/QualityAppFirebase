@@ -48,23 +48,25 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
       .collection("users")
       .doc(user.uid)
       .set({
-        userId: -1,
+        id: -1,
+        teamMemberId: -1,
         email: user.email,
+        phoneNumber: null,
         fullName: user.displayName,
-        companyId: -1,
         company: null,
-        departmentId: -1,
+        companyId: -1,
         department: null,
-        subDepartmentId: -1,
+        departmentId: -1,
         subDepartment: null,
-        jobRoles: [],
-        readLevel: 0,
-        writeLevel: 0,
+        subDepartmentId: -1,
+        readLevel: -1,
+        writeLevel: -1,
+        appRole: -1,
+        jobRole: null,
         restApiUrl: null,
+        restApiToken: null,
         userUid: user.uid,
         devicesTokens: [],
-        passwordSalt: user.passwordSalt,
-        passwordHash: user.passwordHash,
       });
 });
 
@@ -188,38 +190,11 @@ exports.getUserData = functions.https.onCall( (data, context) => {
 
 const axios = require("axios");
 
-exports.createNewTeamMember = functions.https.onCall((data, context) => {
-  if (!context.auth.uid) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "only authenticated users can add request",
-    );
-  }
-  return axios.post("https://qualityappspring.azurewebsites.net/api/v1/teamMembersTesting", {
-    departmentId: 42,
-    department: "Fucking cool department",
-    email: data.email,
-    fullName: data.email,
-    jobRole: "Big boss",
-    roleLevelId: 1,
-    passWord: "111111",
-    companyId: 1,
-  })
-      .then((response) => {
-        console.log("response code is: ", response.status);
-        console.log("response is: ", response.data);
-        return {email: data.email};
-      })
-      .catch((error) => {
-        console.log("error is: ", error.data);
-      });
-});
-
-exports.createRequestedTeamMember = functions
+exports.createFirebaseUser = functions
     .firestore.document("companies/skf/users/{fullName}")
     .onUpdate((snap, context) => {
       const userData = snap.after.data();
-      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/requestedTeamMembers", {
+      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", {
         department: userData.department,
         email: userData.email,
         fullName: userData.fullName,
