@@ -1,4 +1,3 @@
-
 // eslint-disable-next-line require-jsdoc
 class UserModel {
   // eslint-disable-next-line require-jsdoc
@@ -21,26 +20,27 @@ class UserModel {
       restApiToken = null,
       userUid = null,
   ) {
-    this.user.teamMemberId = teamMemberId;
-    this.user.email = email;
-    this.user.phoneNumber = phoneNumber;
-    this.user.fullName = fullName;
-    this.user.company = company;
-    this.user.companyId = companyId;
-    this.user.department = department;
-    this.user.departmentId = departmentId;
-    this.user.subDepartment = subDepartment;
-    this.user.subDepartmentId = subDepartmentId;
-    this.user.readLevel = readLevel;
-    this.user.writeLevel = writeLevel;
-    this.user.appRole = appRole;
-    this.user.jobRole = jobRole;
-    this.user.restApiUrl = restApiUrl;
-    this.user.restApiToken = restApiToken;
-    this.user.userUid = userUid;
+    const user = {};
+    user.teamMemberId = teamMemberId;
+    user.email = email;
+    user.phoneNumber = phoneNumber;
+    user.fullName = fullName;
+    user.company = company;
+    user.companyId = companyId;
+    user.department = department;
+    user.departmentId = departmentId;
+    user.subDepartment = subDepartment;
+    user.subDepartmentId = subDepartmentId;
+    user.readLevel = readLevel;
+    user.writeLevel = writeLevel;
+    user.appRole = appRole;
+    user.jobRole = jobRole;
+    user.restApiUrl = restApiUrl;
+    user.restApiToken = restApiToken;
+    user.userUid = userUid;
 
     this.getUser = () => {
-      return this.user;
+      return user;
     };
   }
 }
