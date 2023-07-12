@@ -198,7 +198,7 @@ exports.createFirebaseUser = functions
         department: userData.department,
         email: userData.email,
         fullName: userData.fullName,
-        jobRole: userData.jobRoles[0],
+        jobRole: userData.jobRole,
         subDepartment: userData.subDepartment,
         userUid: userData.userUid,
       })
@@ -207,6 +207,6 @@ exports.createFirebaseUser = functions
             console.log("response is: ", response.data);
           })
           .catch((error) => {
-            console.log("error is: ", error.data);
+            console.log("error is: ", error.response.data);
           });
     });
