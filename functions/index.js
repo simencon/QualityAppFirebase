@@ -4,9 +4,31 @@ const {
   HttpsError,
 } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
+const functions = require("firebase-functions");
+const axios = require("axios");
 
 admin.initializeApp();
 const db = admin.firestore();
+
+const emptyUser = {
+  teamMemberId: null,
+  email: null,
+  phoneNumber: null,
+  fullName: null,
+  company: null,
+  companyId: -1,
+  department: null,
+  departmentId: -1,
+  subDepartment: null,
+  subDepartmentId: -1,
+  readLevel: -1,
+  writeLevel: -1,
+  appRole: -1,
+  jobRole: null,
+  restApiUrl: null,
+  restApiToken: null,
+  userUid: null,
+};
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -38,8 +60,6 @@ exports.checkforban = beforeUserSignedIn(async (event) => {
     throw new HttpsError("invalid-argument", "User has been disabled");
   }
 });
-
-const functions = require("firebase-functions");
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const company = "skf";
@@ -188,24 +208,20 @@ exports.getUserData = functions.https.onCall( (data, context) => {
       });
 });
 
-const axios = require("axios");
-
-const UserModel = require("./models/UserModel");
-
 exports.createFirebaseUser = functions
     .firestore.document("companies/skf/users/{fullName}")
     .onUpdate((snap, context) => {
       const userData = snap.after.data();
-      const userToPost = new UserModel();
+      const userToPost = emptyUser;
 
-      userToPost.user.email = userData.email;
-      userToPost.user.fullName = userData.fullName;
-      userToPost.user.department = userData.department;
-      userToPost.user.subDepartment = userData.subDepartment;
-      userToPost.user.jobRole = userData.jobRole;
-      userToPost.user.userUid = userData.userUid;
+      userToPost.email = userData.email;
+      userToPost.fullName = userData.fullName;
+      userToPost.department = userData.department;
+      userToPost.subDepartment = userData.subDepartment;
+      userToPost.jobRole = userData.jobRole;
+      userToPost.userUid = userData.userUid;
 
-      console.log("before post", userToPost.getUser());
+      console.log("before post", userToPost);
 
       return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", userToPost.getUser())
           .then((response) => {
