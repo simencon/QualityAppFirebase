@@ -6,30 +6,12 @@ const {
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const axios = require("axios");
+const EmptyUser = require("./model/UserModel");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const emptyUser = {
-  id: -1,
-  teamMemberId: null,
-  email: null,
-  phoneNumber: null,
-  fullName: null,
-  company: null,
-  companyId: -1,
-  department: null,
-  departmentId: -1,
-  subDepartment: null,
-  subDepartmentId: -1,
-  readLevel: -1,
-  writeLevel: -1,
-  appRole: -1,
-  jobRole: null,
-  restApiUrl: null,
-  restApiToken: null,
-  userUid: null,
-};
+const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -64,10 +46,11 @@ exports.checkforban = beforeUserSignedIn(async (event) => {
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const company = "skf";
-  const userToCreate = emptyUser;
+  const userToCreate = new EmptyUser();
   userToCreate.email = user.email;
   userToCreate.fullName = user.displayName;
   userToCreate.userUid = user.uid;
+  console.log("new user is: ", userToCreate);
   return db.collection("companies")
       .doc(company)
       .collection("users")
@@ -152,7 +135,7 @@ exports.updateUserData = functions.https.onCall(async (data, context) => {
             .collection("companies")
             .doc("skf")
             .collection("users")
-            .doc(doc.userUid)
+            .doc(doc.id)
             .update({
               fullName: data.fullName,
               department: data.department,
@@ -197,32 +180,34 @@ exports.createFirebaseUser = functions
     .firestore.document("companies/skf/users/{fullName}")
     .onUpdate((snap, context) => {
       const userData = snap.after.data();
-      const userToPost = emptyUser;
 
-      userToPost.email = userData.email;
-      userToPost.fullName = userData.fullName;
-      userToPost.department = userData.department;
-      userToPost.subDepartment = userData.subDepartment;
-      userToPost.jobRole = userData.jobRole;
-      userToPost.userUid = userData.userUid;
+      console.log("before post", userData);
 
-      console.log("before post", userToPost);
-
-      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", userToPost)
-          .then((response) => {
-            console.log("response code is: ", response.status);
-            console.log("response is: ", response.data);
-            db
-                .doc(`companies/skf/users/${userToPost.userUid}`)
-                .update({id: response.data.id})
-                .then((ref) => {
-                  console.log(ref);
-                })
-                .catch((error) => {
-                  console.log(error);
-                });
-          })
-          .catch((error) => {
-            console.log("error is: ", error.response.data);
-          });
+      if (userData.id !== -1) {
+        return axios.put(`${apiUrl}/firebaseUsers/${userData.id}`, userData)
+            .then((response) => {
+              console.log("response is: ", response.data);
+            })
+            .catch((error) => {
+              console.log("error is: ", error.response.data);
+            });
+      } else {
+        return axios.post(`${apiUrl}/firebaseUsers`, userData)
+            .then((response) => {
+              console.log("response code is: ", response.status);
+              console.log("response is: ", response.data);
+              db
+                  .doc(`companies/skf/users/${userData.userUid}`)
+                  .update({id: response.data.id})
+                  .then((ref) => {
+                    console.log(ref);
+                  })
+                  .catch((error) => {
+                    console.log(error);
+                  });
+            })
+            .catch((error) => {
+              console.log("error is: ", error.response.data);
+            });
+      }
     });
