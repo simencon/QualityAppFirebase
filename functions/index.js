@@ -5,13 +5,10 @@ const {
 } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
-const axios = require("axios");
 const EmptyUser = require("./model/UserModel");
 
 admin.initializeApp();
 const db = admin.firestore();
-
-const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -55,7 +52,7 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
       .doc(company)
       .collection("users")
       .doc(user.uid)
-      .set(userToCreate);
+      .set(userToCreate.data);
 });
 
 exports.userDeleted = functions.auth.user().onDelete((user) => {
@@ -179,35 +176,13 @@ exports.getUserData = functions.https.onCall( (data, context) => {
 exports.createFirebaseUser = functions
     .firestore.document("companies/skf/users/{fullName}")
     .onUpdate((snap, context) => {
-      const userData = snap.after.data();
+      const userData = new EmptyUser().initFromInstance(snap.after.data());
 
       console.log("before post", userData);
 
       if (userData.id !== -1) {
-        return axios.put(`${apiUrl}/firebaseUsers/${userData.id}`, userData)
-            .then((response) => {
-              console.log("response is: ", response.data);
-            })
-            .catch((error) => {
-              console.log("error is: ", error.response.data);
-            });
+        userData.updateUserOnApi();
       } else {
-        return axios.post(`${apiUrl}/firebaseUsers`, userData)
-            .then((response) => {
-              console.log("response code is: ", response.status);
-              console.log("response is: ", response.data);
-              db
-                  .doc(`companies/skf/users/${userData.userUid}`)
-                  .update({id: response.data.id})
-                  .then((ref) => {
-                    console.log(ref);
-                  })
-                  .catch((error) => {
-                    console.log(error);
-                  });
-            })
-            .catch((error) => {
-              console.log("error is: ", error.response.data);
-            });
+        userData.createUserOnApi(db);
       }
     });
