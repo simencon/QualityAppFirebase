@@ -11,6 +11,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const emptyUser = {
+  id: -1,
   teamMemberId: null,
   email: null,
   phoneNumber: null,
@@ -63,31 +64,15 @@ exports.checkforban = beforeUserSignedIn(async (event) => {
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const company = "skf";
+  const userToCreate = emptyUser;
+  userToCreate.email = user.email;
+  userToCreate.fullName = user.displayName;
+  userToCreate.userUid = user.uid;
   return db.collection("companies")
       .doc(company)
       .collection("users")
       .doc(user.uid)
-      .set({
-        id: -1,
-        teamMemberId: -1,
-        email: user.email,
-        phoneNumber: null,
-        fullName: user.displayName,
-        company: null,
-        companyId: -1,
-        department: null,
-        departmentId: -1,
-        subDepartment: null,
-        subDepartmentId: -1,
-        readLevel: -1,
-        writeLevel: -1,
-        appRole: -1,
-        jobRole: null,
-        restApiUrl: null,
-        restApiToken: null,
-        userUid: user.uid,
-        devicesTokens: [],
-      });
+      .set(userToCreate);
 });
 
 exports.userDeleted = functions.auth.user().onDelete((user) => {
@@ -172,7 +157,7 @@ exports.updateUserData = functions.https.onCall(async (data, context) => {
               fullName: data.fullName,
               department: data.department,
               subDepartment: data.subDepartment,
-              jobRoles: data.jobRoles,
+              jobRole: data.jobRole,
             }),
     );
   });
@@ -186,7 +171,7 @@ exports.updateUserData = functions.https.onCall(async (data, context) => {
           fullName: data.fullName,
           department: data.department,
           subDepartment: data.subDepartment,
-          jobRoles: data.jobRoles,
+          jobRole: data.jobRole,
         };
       });
 });
@@ -223,7 +208,7 @@ exports.createFirebaseUser = functions
 
       console.log("before post", userToPost);
 
-      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", userToPost.getUser())
+      return axios.post("https://qualityappspring.azurewebsites.net/api/v1/firebaseUsers", userToPost)
           .then((response) => {
             console.log("response code is: ", response.status);
             console.log("response is: ", response.data);
