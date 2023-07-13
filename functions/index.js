@@ -152,7 +152,7 @@ exports.updateUserData = functions.https.onCall(async (data, context) => {
             .collection("companies")
             .doc("skf")
             .collection("users")
-            .doc(doc.id)
+            .doc(doc.userUid)
             .update({
               fullName: data.fullName,
               department: data.department,
@@ -212,6 +212,15 @@ exports.createFirebaseUser = functions
           .then((response) => {
             console.log("response code is: ", response.status);
             console.log("response is: ", response.data);
+            db
+                .doc(`companies/skf/users/${userToPost.userUid}`)
+                .update({id: response.data.id})
+                .then((ref) => {
+                  console.log(ref);
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
           })
           .catch((error) => {
             console.log("error is: ", error.response.data);
