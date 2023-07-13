@@ -5,7 +5,7 @@ const {
 } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
-const EmptyUser = require("./model/UserModel");
+const UserModel = require("./model/UserModel");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -42,27 +42,52 @@ exports.checkforban = beforeUserSignedIn(async (event) => {
 });
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
-  const company = "skf";
-  const userToCreate = new EmptyUser();
+  const userToCreate = new UserModel();
   userToCreate.email = user.email;
-  userToCreate.fullName = user.displayName;
   userToCreate.userUid = user.uid;
-  console.log("new user is: ", userToCreate);
-  return db.collection("companies")
-      .doc(company)
-      .collection("users")
-      .doc(user.uid)
-      .set(userToCreate.data);
+  userToCreate.createUserOnApi(db)
+      .then((resolve) => console.log(resolve))
+      .catch((error) => console.log(error));
 });
 
 exports.userDeleted = functions.auth.user().onDelete((user) => {
-  const company = "skf";
-  const doc = db
-      .collection("companies")
-      .doc(company)
-      .collection("users")
-      .doc(user.uid);
-  return doc.delete();
+  return db.doc(`companies/skf/users/${user.uid}`).delete();
+});
+
+exports.updateUserData = functions.https.onCall(async (data, context) => {
+  if (!context.auth.uid) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "only authenticated users can add request",
+    );
+  }
+
+  return db.doc(`companies/skf/users/${context.auth.uid}`)
+      .get()
+      .then((snap) => {
+        const userToUpdate = new UserModel().initFromInstance(snap.data());
+        userToUpdate.fullName = data.fullName;
+        userToUpdate.department = data.department;
+        userToUpdate.subDepartment = data.subDepartment;
+        userToUpdate.jobRole = data.jobRole;
+        userToUpdate.updateUserOnApi(db)
+            .then((resolve) => console.log(resolve))
+            .catch((error) => console.log(error));
+      });
+});
+
+exports.getUserData = functions.https.onCall( (data, context) => {
+  if (!context.auth.uid) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "only authenticated users can add request",
+    );
+  }
+  return db.doc(`companies/skf/users/${context.auth.uid}`)
+      .get()
+      .then((snap) => {
+        return snap.data();
+      });
 });
 
 exports.logUserData = functions
@@ -75,19 +100,14 @@ exports.logUserData = functions
         );
       }
       const snapshot = await db
-          .collection("companies")
-          .doc("skf")
-          .collection("usersInfoLog")
+          .collection("companies/skf/usersInfoLog")
           .where("email", "==", data.email)
           .get();
       if (snapshot.empty) {
         return db
-            .collection("companies")
-            .doc("skf")
-            .collection("usersInfoLog")
-            .add(
-                data,
-            ).then((record) => {
+            .collection("companies/skf/usersInfoLog")
+            .add(data)
+            .then((record) => {
               return data;
             });
       } else {
@@ -95,94 +115,13 @@ exports.logUserData = functions
         snapshot.forEach((doc) => {
           updatePromises.push(
               db
-                  .collection("companies")
-                  .doc("skf")
-                  .collection("usersInfoLog")
+                  .collection("companies/skf/usersInfoLog")
                   .doc(doc.id)
-                  .update(
-                      data,
-                  ),
-          );
+                  .update(data));
         });
         return Promise.all(updatePromises).then((records) => {
           data.result = "user data logged";
           return data;
         });
-      }
-    });
-
-exports.updateUserData = functions.https.onCall(async (data, context) => {
-  if (!context.auth.uid) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "only authenticated users can add request",
-    );
-  }
-
-  const snapshot = await db.collection("companies")
-      .doc("skf")
-      .collection("users")
-      .where("email", "==", data.email)
-      .get();
-  const updatePromises = [];
-
-  snapshot.forEach((doc) => {
-    updatePromises.push(
-        db
-            .collection("companies")
-            .doc("skf")
-            .collection("users")
-            .doc(doc.id)
-            .update({
-              fullName: data.fullName,
-              department: data.department,
-              subDepartment: data.subDepartment,
-              jobRole: data.jobRole,
-            }),
-    );
-  });
-
-  return Promise
-      .all(updatePromises)
-      .then((timeStamp) => {
-        return {
-          result: "user data updated",
-          email: data.email,
-          fullName: data.fullName,
-          department: data.department,
-          subDepartment: data.subDepartment,
-          jobRole: data.jobRole,
-        };
-      });
-});
-
-exports.getUserData = functions.https.onCall( (data, context) => {
-  if (!context.auth.uid) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "only authenticated users can add request",
-    );
-  }
-  return db.collection("companies")
-      .doc("skf")
-      .collection("users")
-      .where("email", "==", data.email)
-      .get()
-      .then((ref) => {
-        return ref.docs.map((doc) => doc.data())[0];
-      });
-});
-
-exports.createFirebaseUser = functions
-    .firestore.document("companies/skf/users/{fullName}")
-    .onUpdate((snap, context) => {
-      const userData = new EmptyUser().initFromInstance(snap.after.data());
-
-      console.log("before post", userData);
-
-      if (userData.id !== -1) {
-        userData.updateUserOnApi();
-      } else {
-        userData.createUserOnApi(db);
       }
     });

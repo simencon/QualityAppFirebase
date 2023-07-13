@@ -2,7 +2,7 @@ const axios = require("axios");
 const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
 
 // eslint-disable-next-line require-jsdoc
-function EmptyUser() {
+function UserModel() {
   this.id = -1;
   this.teamMemberId = null;
   this.email = null;
@@ -22,7 +22,9 @@ function EmptyUser() {
   this.restApiToken = null;
   this.userUid = null;
 
-  this.data = JSON.parse(JSON.stringify(this));
+  this.data = function() {
+    return JSON.parse(JSON.stringify(this));
+  };
 
   this.initFromInstance = function(instance) {
     this.id = instance.id;
@@ -46,35 +48,63 @@ function EmptyUser() {
     return this;
   };
 
-  this.updateUserOnApi = function() {
-    return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data)
-        .then((response) => {
-          console.log("response is: ", response.data);
-        })
-        .catch((error) => {
-          console.log("error is: ", error.response.data);
-        });
+  this.updateUserOnApi = function(db) {
+    console.log("user to update: ", this.data());
+    return new Promise((resolve, reject) => {
+      axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
+          .then((response) => {
+            console.log("response is: ", response.data);
+            return db
+                .doc(`companies/skf/users/${this.userUid}`)
+                .update(this.data())
+                .then((timeStamp) => {
+                  resolve("success");
+                  return {
+                    result: "user data updated",
+                    email: this.email,
+                    fullName: this.fullName,
+                    department: this.department,
+                    subDepartment: this.subDepartment,
+                    jobRole: this.jobRole,
+                  };
+                })
+                .catch((error) => {
+                  console.log(error);
+                  reject(Error("not stored by restApi"));
+                });
+          })
+          .catch((error) => {
+            console.log("error is: ", error.response.data);
+            reject(Error("not updated by restApi"));
+          });
+    });
   };
 
   this.createUserOnApi = function(db) {
-    return axios.post(`${apiUrl}/firebaseUsers`, this.data)
-        .then((response) => {
-          console.log("response code is: ", response.status);
-          console.log("response is: ", response.data);
-          db
-              .doc(`companies/skf/users/${this.userUid}`)
-              .update({id: response.data.id})
-              .then((ref) => {
-                console.log(ref);
-              })
-              .catch((error) => {
-                console.log(error);
-              });
-        })
-        .catch((error) => {
-          console.log("error is: ", error.response.data);
-        });
+    console.log("user to create: ", this.data());
+    return new Promise((resolve, reject) => {
+      axios.post(`${apiUrl}/firebaseUsers`, this.data())
+          .then(async (response) => {
+            console.log("response code is: ", response.status);
+            console.log("response is: ", response.data);
+            await db
+                .doc(`companies/skf/users/${this.userUid}`)
+                .set(response.data)
+                .then((ref) => {
+                  console.log(ref);
+                  resolve("success");
+                })
+                .catch((error) => {
+                  console.log(error);
+                  reject(Error("not stored by Firebase"));
+                });
+          })
+          .catch((error) => {
+            console.log("error is: ", error.response.data);
+            reject(Error("not stored by restApi"));
+          });
+    });
   };
 }
 
-module.exports = EmptyUser;
+module.exports = UserModel;
