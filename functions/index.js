@@ -45,7 +45,7 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const userToCreate = new UserModel();
   userToCreate.email = user.email;
   userToCreate.userUid = user.uid;
-  return userToCreate.createUser(db);
+  return userToCreate.createUserOrCopyFromApi(db);
 });
 
 exports.updateUserData = functions.https.onCall( (data, context) => {
@@ -64,7 +64,7 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
         userToUpdate.department = data.department;
         userToUpdate.subDepartment = data.subDepartment;
         userToUpdate.jobRole = data.jobRole;
-        return userToUpdate.updateUser(db);
+        return userToUpdate.updateUserIfEmptyDetails(db);
       });
 });
 
@@ -85,39 +85,3 @@ exports.getUserData = functions.https.onCall( (data, context) => {
         return snap.data();
       });
 });
-
-exports.logUserData = functions
-    .https
-    .onCall(async (data, context) => {
-      if (!context.auth.uid) {
-        throw new functions.https.HttpsError(
-            "unauthenticated",
-            "only authenticated users can add request",
-        );
-      }
-      const snapshot = await db
-          .collection("companies/skf/usersInfoLog")
-          .where("email", "==", data.email)
-          .get();
-      if (snapshot.empty) {
-        return db
-            .collection("companies/skf/usersInfoLog")
-            .add(data)
-            .then((record) => {
-              return data;
-            });
-      } else {
-        const updatePromises = [];
-        snapshot.forEach((doc) => {
-          updatePromises.push(
-              db
-                  .collection("companies/skf/usersInfoLog")
-                  .doc(doc.id)
-                  .update(data));
-        });
-        return Promise.all(updatePromises).then((records) => {
-          data.result = "user data logged";
-          return data;
-        });
-      }
-    });

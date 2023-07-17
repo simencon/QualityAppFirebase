@@ -48,7 +48,7 @@ function UserModel() {
     return this;
   };
 
-  this.createUser = function(db) {
+  this.createUserOrCopyFromApi = function(db) {
     return axios.post(`${apiUrl}/firebaseUsers`, this.data())
         .then((response) => {
           return db
@@ -62,63 +62,35 @@ function UserModel() {
               });
         })
         .catch((error) => {
-          if (error.response.data.message.includes(" recordId: ")) {
-            this.id = parseInt(error.response.data.message.match(/\d+/g)[0]);
-            console.log("user exists on Api, id: ", this.id);
-            return this.updateUserUidOnly(this.userUid, db);
-          }
           return error.response.data;
         });
   };
 
-  this.updateUser = function(db) {
-    return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
-        .then((response) => {
-          const docRef = db.doc(`companies/skf/users/${response.data.userUid}`);
-          return docRef.get().then((doc) => {
-            if (doc.exists) {
-              if (doc.data().fullName == null) {
-                return docRef
-                    .update(response.data)
-                    .then((timeStamp) => {
-                      return response.data;
-                    })
-                    .catch((error) => {
-                      return error;
-                    });
-              } else {
-                return doc.data();
-              }
-            } else {
+  this.updateUserIfEmptyDetails = function(db) {
+    const docRef = db.doc(`companies/skf/users/${this.userUid}`);
+    return docRef.get().then((doc) => {
+      console.log("user full name:", doc.data().fullName);
+      if (doc.data().fullName == null) {
+        return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
+            .then((response) => {
               return docRef
-                  .set(response.data)
+                  .update(response.data)
                   .then((timeStamp) => {
                     return response.data;
                   })
                   .catch((error) => {
                     return error;
                   });
-            }
-          }).catch((error) => {
-            return error;
-          });
-        })
-        .catch((error) => {
-          return error.response.data;
-        });
-  };
-
-  this.updateUserUidOnly = function(userUid, db) {
-    return axios.get(`${apiUrl}/firebaseUsers/${this.id}`)
-        .then((response) => {
-          this.initFromInstance(response.data);
-          this.userUid = userUid;
-          console.log("user to be updated: ", this.data());
-          return this.updateUser(db);
-        })
-        .catch((error) => {
-          return error.response.data;
-        });
+            })
+            .catch((error) => {
+              return error.response.data;
+            });
+      } else {
+        return doc.data();
+      }
+    }).catch((error) => {
+      return error;
+    });
   };
 }
 
