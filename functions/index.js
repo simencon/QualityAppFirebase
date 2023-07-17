@@ -45,7 +45,7 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const userToCreate = new UserModel();
   userToCreate.email = user.email;
   userToCreate.userUid = user.uid;
-  return userToCreate.createUserOnApi(db);
+  return userToCreate.createUser(db);
 });
 
 exports.updateUserData = functions.https.onCall( (data, context) => {
@@ -64,7 +64,7 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
         userToUpdate.department = data.department;
         userToUpdate.subDepartment = data.subDepartment;
         userToUpdate.jobRole = data.jobRole;
-        return userToUpdate.updateUserOnApi(db);
+        return userToUpdate.updateUser(db);
       });
 });
 
