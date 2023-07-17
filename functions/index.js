@@ -45,16 +45,10 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const userToCreate = new UserModel();
   userToCreate.email = user.email;
   userToCreate.userUid = user.uid;
-  userToCreate.createUserOnApi(db)
-      .then((resolve) => console.log(resolve))
-      .catch((error) => console.log(error));
+  return userToCreate.createUserOnApi(db);
 });
 
-exports.userDeleted = functions.auth.user().onDelete((user) => {
-  return db.doc(`companies/skf/users/${user.uid}`).delete();
-});
-
-exports.updateUserData = functions.https.onCall(async (data, context) => {
+exports.updateUserData = functions.https.onCall( (data, context) => {
   if (!context.auth.uid) {
     throw new functions.https.HttpsError(
         "unauthenticated",
@@ -70,10 +64,12 @@ exports.updateUserData = functions.https.onCall(async (data, context) => {
         userToUpdate.department = data.department;
         userToUpdate.subDepartment = data.subDepartment;
         userToUpdate.jobRole = data.jobRole;
-        userToUpdate.updateUserOnApi(db)
-            .then((resolve) => console.log(resolve))
-            .catch((error) => console.log(error));
+        return userToUpdate.updateUserOnApi(db);
       });
+});
+
+exports.userDeleted = functions.auth.user().onDelete((user) => {
+  return db.doc(`companies/skf/users/${user.uid}`).delete();
 });
 
 exports.getUserData = functions.https.onCall( (data, context) => {
