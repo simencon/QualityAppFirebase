@@ -66,31 +66,22 @@ function UserModel() {
         });
   };
 
-  this.updateUserIfEmptyDetails = function(db) {
+  this.updateUserDataProvidedByUser = function(db) {
     const docRef = db.doc(`companies/skf/users/${this.userUid}`);
-    return docRef.get().then((doc) => {
-      console.log("user full name:", doc.data().fullName);
-      if (doc.data().fullName == null) {
-        return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
-            .then((response) => {
-              return docRef
-                  .update(response.data)
-                  .then((timeStamp) => {
-                    return response.data;
-                  })
-                  .catch((error) => {
-                    return error;
-                  });
-            })
-            .catch((error) => {
-              return error.response.data;
-            });
-      } else {
-        return doc.data();
-      }
-    }).catch((error) => {
-      return error;
-    });
+    return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
+        .then((response) => {
+          return docRef
+              .update(response.data)
+              .then((timeStamp) => {
+                return response.data;
+              })
+              .catch((error) => {
+                return error;
+              });
+        })
+        .catch((error) => {
+          return error.response.data;
+        });
   };
 }
 

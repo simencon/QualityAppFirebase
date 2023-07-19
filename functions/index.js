@@ -64,7 +64,7 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
         userToUpdate.department = data.department;
         userToUpdate.subDepartment = data.subDepartment;
         userToUpdate.jobRole = data.jobRole;
-        return userToUpdate.updateUserIfEmptyDetails(db);
+        return userToUpdate.updateUserDataProvidedByUser(db);
       });
 });
 
