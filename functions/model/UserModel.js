@@ -17,7 +17,7 @@ function UserModel() {
   this.jobRole = null;
   this.restApiUrl = null;
   this.userUid = null;
-  this.authorities = null;
+  this.roles = null;
   this.isAccountNonExpired = false;
   this.isAccountNonLock = false;
   this.isCredentialsNonExpired = false;
@@ -42,7 +42,7 @@ function UserModel() {
     this.jobRole = instance.jobRole;
     this.restApiUrl = instance.restApiUrl;
     this.userUid = instance.userUid;
-    this.authorities = instance.authorities;
+    this.roles = instance.roles;
     this.isAccountNonExpired = instance.isAccountNonExpired;
     this.isAccountNonLock = instance.isAccountNonLock;
     this.isCredentialsNonExpired = instance.isCredentialsNonExpired;
@@ -78,11 +78,11 @@ function UserModel() {
                 return response.data;
               })
               .catch((error) => {
-                return error;
+                throw error;
               });
         })
         .catch((error) => {
-          return error.response.data;
+          throw error;
         });
   };
 }
