@@ -14,13 +14,14 @@ function UserModel() {
   this.departmentId = -1;
   this.subDepartment = null;
   this.subDepartmentId = -1;
-  this.readLevel = -1;
-  this.writeLevel = -1;
-  this.appRole = -1;
   this.jobRole = null;
   this.restApiUrl = null;
-  this.restApiToken = null;
   this.userUid = null;
+  this.authorities = null;
+  this.isAccountNonExpired = false;
+  this.isAccountNonLock = false;
+  this.isCredentialsNonExpired = false;
+  this.isEnabled = false;
 
   this.data = function() {
     return JSON.parse(JSON.stringify(this));
@@ -38,13 +39,14 @@ function UserModel() {
     this.departmentId = instance.departmentId;
     this.subDepartment = instance.subDepartment;
     this.subDepartmentId = instance.subDepartmentId;
-    this.readLevel = instance.readLevel;
-    this.writeLevel = instance.writeLevel;
-    this.appRole = instance.appRole;
     this.jobRole = instance.jobRole;
     this.restApiUrl = instance.restApiUrl;
-    this.restApiToken = instance.restApiToken;
     this.userUid = instance.userUid;
+    this.authorities = instance.authorities;
+    this.isAccountNonExpired = instance.isAccountNonExpired;
+    this.isAccountNonLock = instance.isAccountNonLock;
+    this.isCredentialsNonExpired = instance.isCredentialsNonExpired;
+    this.isEnabled = instance.isEnabled;
     return this;
   };
 
