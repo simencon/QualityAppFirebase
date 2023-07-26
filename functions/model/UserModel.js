@@ -60,11 +60,11 @@ function UserModel() {
                 return response.data;
               })
               .catch((error) => {
-                return error;
+                throw error;
               });
         })
         .catch((error) => {
-          return error.response.data;
+          throw error;
         });
   };
 
