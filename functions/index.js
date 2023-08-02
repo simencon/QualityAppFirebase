@@ -6,9 +6,11 @@ const {
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const UserModel = require("./model/UserModel");
+const {getAuth} = require("firebase-admin/auth");
 
 admin.initializeApp();
 const db = admin.firestore();
+const superUserUid = "seNJ7oCrP0SS5Eb3iakOA1oYpNi1";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -82,6 +84,10 @@ exports.getUserData = functions.https.onCall( (data, context) => {
   return db.doc(`companies/skf/users/${context.auth.uid}`)
       .get()
       .then((snap) => {
+        getAuth(admin.app).createCustomToken(superUserUid)
+            .then((customToken) => {
+              console.log("custom token is: ", customToken);
+            });
         return snap.data();
       });
 });
