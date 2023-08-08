@@ -10,7 +10,7 @@ const {getAuth} = require("firebase-admin/auth");
 
 admin.initializeApp();
 const db = admin.firestore();
-const superUserUid = "seNJ7oCrP0SS5Eb3iakOA1oYpNi1";
+const adminUserEmail = "romansemenyshyn@gmail.com";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -81,13 +81,23 @@ exports.getUserData = functions.https.onCall( (data, context) => {
         "only authenticated users can add request",
     );
   }
+  const auth = getAuth();
   return db.doc(`companies/skf/users/${context.auth.uid}`)
       .get()
       .then((snap) => {
-        getAuth(admin.app).createCustomToken(superUserUid)
-            .then((customToken) => {
-              console.log("custom token is: ", customToken);
+        auth.getUserByEmail(adminUserEmail)
+            .then( (userRecord) => {
+              auth.createCustomToken(userRecord.uid)
+                  .then((customToken) => {
+                    console.log("custom token is: ", customToken);
+                    const principle = new UserModel(snap.data());
+                    let tokenId = "";
+                    principle.obtainTokenId(customToken).then((response) => {
+                      tokenId = response.data;
+                      console.log("token id is: ", tokenId);
+                      return snap.data();
+                    });
+                  });
             });
-        return snap.data();
       });
 });

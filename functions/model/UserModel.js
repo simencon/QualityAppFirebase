@@ -1,5 +1,7 @@
 const axios = require("axios");
 const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
+const signInApiUrl = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=";
+const firebaseProjectWebKey = "AIzaSyDgDklgkFPQCYh1abTGILRJtC6eZoOjOrk";
 
 // eslint-disable-next-line require-jsdoc
 function UserModel() {
@@ -48,6 +50,11 @@ function UserModel() {
     this.isCredentialsNonExpired = instance.isCredentialsNonExpired;
     this.isEnabled = instance.isEnabled;
     return this;
+  };
+
+  this.obtainTokenId = function(customToken) {
+    return axios.post(signInApiUrl + firebaseProjectWebKey,
+        {token: customToken, returnSecureToken: true});
   };
 
   this.createUserOrCopyFromApi = function(db) {
