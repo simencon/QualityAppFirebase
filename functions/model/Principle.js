@@ -2,10 +2,9 @@ const axios = require("axios");
 const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
 
 // eslint-disable-next-line require-jsdoc
-function UserModel() {
-  this.id = -1;
-  this.teamMemberId = null;
+function Principle() {
   this.email = null;
+  this.teamMemberId = null;
   this.phoneNumber = null;
   this.fullName = null;
   this.company = null;
@@ -28,9 +27,8 @@ function UserModel() {
   };
 
   this.initFromInstance = function(instance) {
-    this.id = instance.id;
-    this.teamMemberId = instance.teamMemberId;
     this.email = instance.email;
+    this.teamMemberId = instance.teamMemberId;
     this.phoneNumber = instance.phoneNumber;
     this.fullName = instance.fullName;
     this.company = instance.company;
@@ -87,4 +85,4 @@ function UserModel() {
   };
 }
 
-module.exports = UserModel;
+module.exports = Principle;

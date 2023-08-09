@@ -5,7 +5,7 @@ const {
 } = require("firebase-functions/v2/identity");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
-const UserModel = require("./model/UserModel");
+const UserModel = require("./model/Principle");
 const {getAuth} = require("firebase-admin/auth");
 
 admin.initializeApp();
