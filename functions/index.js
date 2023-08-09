@@ -6,16 +6,16 @@ const {
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const UserModel = require("./model/Principle");
-const {getAuth} = require("firebase-admin/auth");
+// const {getAuth} = require("firebase-admin/auth");
 
 admin.initializeApp();
 const db = admin.firestore();
-const superUserUid = "seNJ7oCrP0SS5Eb3iakOA1oYpNi1";
+// const superUserUid = "seNJ7oCrP0SS5Eb3iakOA1oYpNi1";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
   const email = event.data.email || "";
-
+  console.log("email from event: ", email);
   const externalEmails = await db
       .collection("companies")
       .doc(company)
@@ -31,6 +31,7 @@ exports.validatenewuser = beforeUserCreated(async (event) => {
 exports.checkforban = beforeUserSignedIn(async (event) => {
   const company = "skf";
   const email = event.data.email || "";
+  console.log("email from event: ", email);
   const bannedEmails = await db
       .collection("companies")
       .doc(company)
@@ -46,7 +47,13 @@ exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const userToCreate = new UserModel();
   userToCreate.email = user.email;
   userToCreate.userUid = user.uid;
-  return userToCreate.createUserOrCopyFromApi(db);
+  return userToCreate.createUserDocOrUpdateDocWithUserData(db);
+});
+
+exports.userDeleted = functions.auth.user().onDelete((user) => {
+  const userToClear = new UserModel();
+  userToClear.email = user.email;
+  return userToClear.clearUserDocFromUserData();
 });
 
 exports.updateUserData = functions.https.onCall( (data, context) => {
@@ -57,20 +64,11 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
     );
   }
 
-  return db.doc(`companies/skf/users/${context.auth.uid}`)
-      .get()
-      .then((snap) => {
-        const userToUpdate = new UserModel().initFromInstance(snap.data());
-        userToUpdate.fullName = data.fullName;
-        userToUpdate.department = data.department;
-        userToUpdate.subDepartment = data.subDepartment;
-        userToUpdate.jobRole = data.jobRole;
-        return userToUpdate.updateUserDataProvidedByUser(db);
-      });
-});
-
-exports.userDeleted = functions.auth.user().onDelete((user) => {
-  return db.doc(`companies/skf/users/${user.uid}`).delete();
+  const userToUpdate = new UserModel();
+  userToUpdate.email = context.auth.token.email;
+  userToUpdate.phoneNumber = data.phoneNumber;
+  userToUpdate.fullName = data.fullName;
+  return userToUpdate.updateDocWithUserData(userToUpdate);
 });
 
 exports.getUserData = functions.https.onCall( (data, context) => {
@@ -80,13 +78,8 @@ exports.getUserData = functions.https.onCall( (data, context) => {
         "only authenticated users can add request",
     );
   }
-  return db.doc(`companies/skf/users/${context.auth.uid}`)
-      .get()
-      .then((snap) => {
-        getAuth(admin.app).createCustomToken(superUserUid)
-            .then((customToken) => {
-              console.log("custom token is: ", customToken);
-            });
-        return snap.data();
-      });
+  const userToRead = new UserModel();
+  console.log(context.auth.token.email);
+  userToRead.email = context.auth.token.email;
+  return userToRead.getPrincipleDoc(db);
 });

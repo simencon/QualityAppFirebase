@@ -1,5 +1,6 @@
-const axios = require("axios");
-const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
+// const axios = require("axios");
+// const apiUrl = "https://qualityappspring.azurewebsites.net/api/v1";
+const noRecordNum = -1;
 
 // eslint-disable-next-line require-jsdoc
 function Principle() {
@@ -8,11 +9,11 @@ function Principle() {
   this.phoneNumber = null;
   this.fullName = null;
   this.company = null;
-  this.companyId = -1;
+  this.companyId = noRecordNum;
   this.department = null;
-  this.departmentId = -1;
+  this.departmentId = noRecordNum;
   this.subDepartment = null;
-  this.subDepartmentId = -1;
+  this.subDepartmentId = noRecordNum;
   this.jobRole = null;
   this.restApiUrl = null;
   this.userUid = null;
@@ -26,7 +27,7 @@ function Principle() {
     return JSON.parse(JSON.stringify(this));
   };
 
-  this.initFromInstance = function(instance) {
+  this.copyFromInstance = function(instance) {
     this.email = instance.email;
     this.teamMemberId = instance.teamMemberId;
     this.phoneNumber = instance.phoneNumber;
@@ -48,36 +49,100 @@ function Principle() {
     return this;
   };
 
-  this.createUserOrCopyFromApi = function(db) {
-    return axios.post(`${apiUrl}/firebaseUsers`, this.data())
-        .then((response) => {
-          return db
-              .doc(`companies/skf/users/${response.data.userUid}`)
-              .set(response.data)
-              .then((timeStamp) => {
-                return response.data;
-              })
-              .catch((error) => {
-                throw error;
-              });
+  this.updateOnlyUserData = function(instance) {
+    this.phoneNumber = instance.phoneNumber;
+    this.fullName = instance.fullName;
+    this.userUid = instance.userUid;
+    this.isEnabled = instance.isEnabled;
+  };
+
+  this.clearUserRelatedData = function(instance) {
+    instance.phoneNumber = null;
+    instance.fullName = null;
+    instance.userUid = null;
+    instance.isEnabled = false;
+    return instance;
+  };
+
+  this.createUserDocOrUpdateDocWithUserData = function(db) {
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .get()
+        .then((snap) => {
+          const principle = snap.data();
+          principle.updateOnlyUserData(this.data());
+          this.copyFromInstance(principle);
+          this.savePrincipleDoc(db);
+        })
+        .catch((error) => {
+          console.log("user not exists", error);
+          this.savePrincipleDoc(db);
+        });
+  };
+
+  this.savePrincipleDoc = function(db) {
+    console.log("principle data before actions: ", this.data());
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .set(this.data())
+        .then((/* timeStamp*/) => {
+          return this.data();
         })
         .catch((error) => {
           throw error;
         });
   };
 
-  this.updateUserDataProvidedByUser = function(db) {
-    const docRef = db.doc(`companies/skf/users/${this.userUid}`);
-    return axios.put(`${apiUrl}/firebaseUsers/${this.id}`, this.data())
-        .then((response) => {
-          return docRef
-              .update(response.data)
-              .then((timeStamp) => {
-                return response.data;
-              })
-              .catch((error) => {
-                throw error;
-              });
+  this.clearUserDocFromUserData = function(db) {
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .get(this.data())
+        .then((snap) => {
+          const principle = snap.data();
+          principle.clearUserRelatedData(this.data());
+          this.copyFromInstance(principle);
+          this.updatePrincipleDoc(db);
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.updateDocWithUserData = function(db) {
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .get()
+        .then((snap) => {
+          const principle = snap.data();
+          principle.updateOnlyUserData(this.data());
+          this.copyFromInstance(principle);
+          this.updatePrincipleDoc(db);
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.updatePrincipleDoc = function(db) {
+    console.log("principle data before actions: ", this.data());
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .update(this.data())
+        .then((/* timeStamp*/) => {
+          return this.data();
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.getPrincipleDoc = function(db) {
+    console.log("principle data before actions: ", this.data());
+    return db
+        .doc(`companies/skf/users/${this.email}`)
+        .get(this.data())
+        .then((snap) => {
+          return snap.data();
         })
         .catch((error) => {
           throw error;
