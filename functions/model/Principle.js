@@ -4,8 +4,7 @@ const noRecordNum = -1;
 
 // eslint-disable-next-line require-jsdoc
 function Principle() {
-  this.email = null;
-  this.teamMemberId = null;
+  this.teamMemberId = noRecordNum;
   this.phoneNumber = null;
   this.fullName = null;
   this.company = null;
@@ -18,17 +17,21 @@ function Principle() {
   this.restApiUrl = null;
   this.userUid = null;
   this.roles = null;
-  this.isAccountNonExpired = false;
-  this.isAccountNonLock = false;
-  this.isCredentialsNonExpired = false;
-  this.isEnabled = false;
+  this.accountNonExpired = false;
+  this.accountNonLocked = false;
+  this.credentialsNonExpired = false;
+  this.enabled = false;
 
   this.data = function() {
     return JSON.parse(JSON.stringify(this));
   };
 
+  // this.dataWithId = function() {
+  //   const principleData = JSON.parse(JSON.stringify(this));
+  //   return JSON.parse(JSON.stringify(this));
+  // };
+
   this.copyFromInstance = function(instance) {
-    this.email = instance.email;
     this.teamMemberId = instance.teamMemberId;
     this.phoneNumber = instance.phoneNumber;
     this.fullName = instance.fullName;
@@ -42,109 +45,98 @@ function Principle() {
     this.restApiUrl = instance.restApiUrl;
     this.userUid = instance.userUid;
     this.roles = instance.roles;
-    this.isAccountNonExpired = instance.isAccountNonExpired;
-    this.isAccountNonLock = instance.isAccountNonLock;
-    this.isCredentialsNonExpired = instance.isCredentialsNonExpired;
-    this.isEnabled = instance.isEnabled;
+    this.accountNonExpired = instance.accountNonExpired;
+    this.accountNonLocked = instance.accountNonLocked;
+    this.credentialsNonExpired = instance.credentialsNonExpired;
+    this.enabled = instance.enabled;
     return this;
   };
 
-  this.updateOnlyUserData = function(instance) {
+  this.updateUserInitialData = function(instance) {
     this.phoneNumber = instance.phoneNumber;
     this.fullName = instance.fullName;
+    this.company = instance.company;
+    this.department = instance.department;
+    this.subDepartment = instance.subDepartment;
+    this.jobRole = instance.jobRole;
     this.userUid = instance.userUid;
-    this.isEnabled = instance.isEnabled;
+    this.enabled = instance.enabled;
+    return this;
   };
 
-  this.clearUserRelatedData = function(instance) {
-    instance.phoneNumber = null;
-    instance.fullName = null;
-    instance.userUid = null;
-    instance.isEnabled = false;
-    return instance;
+  this.updateUserLongTerm = function(instance) {
+    this.userUid = instance.userUid;
+    this.enabled = instance.enabled;
+    return this;
   };
 
-  this.createUserDocOrUpdateDocWithUserData = function(db) {
-    console.log("the doc id is:", this.email);
+  this.createUserDocOrUpdateDocWithLongTermData = function(db, docId) {
     return db
-        .doc(`companies/skf/users/${this.email}`)
+        .doc(`companies/skf/users/${docId}`)
         .get()
         .then((snap) => {
           const principle = new Principle().copyFromInstance(snap.data());
-          principle.updateOnlyUserData(this.data());
+          principle.updateUserLongTerm(this.data());
           this.copyFromInstance(principle);
-          this.savePrincipleDoc(db);
+          this.savePrincipleDoc(db, docId);
         })
-        .catch((error) => {
-          console.log("user not exists", error);
-          this.savePrincipleDoc(db);
+        .catch(() => {
+          this.savePrincipleDoc(db, docId);
         });
   };
 
-  this.savePrincipleDoc = function(db) {
-    console.log("principle data before actions: ", this.data());
+  this.clearUserDocFromLongTermData = function(db, docId) {
+    console.log("user to clear: ", docId);
     return db
-        .doc(`companies/skf/users/${this.email}`)
+        .doc(`companies/skf/users/${docId}`)
+        .get()
+        .then((snap) => {
+          const principle = new Principle().copyFromInstance(snap.data());
+          principle.updateUserLongTerm(this.data());
+          this.copyFromInstance(principle);
+          this.savePrincipleDoc(db, docId);
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.updateDocWithUserData = function(db, docId) {
+    return db
+        .doc(`companies/skf/users/${docId}`)
+        .get()
+        .then((snap) => {
+          const principle = new Principle().copyFromInstance(snap.data());
+          this.userUid = principle.userUid;
+          this.enabled = principle.enabled;
+          principle.updateUserInitialData(this.data());
+          this.copyFromInstance(principle);
+          this.savePrincipleDoc(db, docId);
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.getPrincipleDoc = function(db, docId) {
+    return db
+        .doc(`companies/skf/users/${docId}`)
+        .get(this.data())
+        .then((snap) => {
+          const principle = this.copyFromInstance(snap.data());
+          return principle.data();
+        })
+        .catch((error) => {
+          throw error;
+        });
+  };
+
+  this.savePrincipleDoc = function(db, docId) {
+    return db
+        .doc(`companies/skf/users/${docId}`)
         .set(this.data())
         .then((/* timeStamp*/) => {
           return this.data();
-        })
-        .catch((error) => {
-          throw error;
-        });
-  };
-
-  this.clearUserDocFromUserData = function(db) {
-    console.log("the doc id is:", this.email);
-    return db
-        .doc(`companies/skf/users/${this.email}`)
-        .get()
-        .then((snap) => {
-          const principle = new Principle().copyFromInstance(snap.data());
-          principle.clearUserRelatedData(this.data());
-          this.copyFromInstance(principle);
-          this.updatePrincipleDoc(db);
-        })
-        .catch((error) => {
-          throw error;
-        });
-  };
-
-  this.updateDocWithUserData = function(db) {
-    return db
-        .doc(`companies/skf/users/${this.email}`)
-        .get()
-        .then((snap) => {
-          const principle = snap.data();
-          principle.updateOnlyUserData(this.data());
-          this.copyFromInstance(principle);
-          this.updatePrincipleDoc(db);
-        })
-        .catch((error) => {
-          throw error;
-        });
-  };
-
-  this.updatePrincipleDoc = function(db) {
-    console.log("principle data before actions: ", this.data());
-    return db
-        .doc(`companies/skf/users/${this.email}`)
-        .update(this.data())
-        .then((/* timeStamp*/) => {
-          return this.data();
-        })
-        .catch((error) => {
-          throw error;
-        });
-  };
-
-  this.getPrincipleDoc = function(db) {
-    console.log("principle data before actions: ", this.data());
-    return db
-        .doc(`companies/skf/users/${this.email}`)
-        .get(this.data())
-        .then((snap) => {
-          return snap.data();
         })
         .catch((error) => {
           throw error;

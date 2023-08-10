@@ -15,7 +15,6 @@ const db = admin.firestore();
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
   const email = event.data.email || "";
-  console.log("email from event: ", email);
   const externalEmails = await db
       .collection("companies")
       .doc(company)
@@ -31,7 +30,6 @@ exports.validatenewuser = beforeUserCreated(async (event) => {
 exports.checkforban = beforeUserSignedIn(async (event) => {
   const company = "skf";
   const email = event.data.email || "";
-  console.log("email from event: ", email);
   const bannedEmails = await db
       .collection("companies")
       .doc(company)
@@ -45,15 +43,13 @@ exports.checkforban = beforeUserSignedIn(async (event) => {
 
 exports.newUserSignup = functions.auth.user().onCreate((user) => {
   const userToCreate = new UserModel();
-  userToCreate.email = user.email;
   userToCreate.userUid = user.uid;
-  return userToCreate.createUserDocOrUpdateDocWithUserData(db);
+  return userToCreate.createUserDocOrUpdateDocWithLongTermData(db, user.email);
 });
 
 exports.userDeleted = functions.auth.user().onDelete((user) => {
   const userToClear = new UserModel();
-  userToClear.email = user.email;
-  return userToClear.clearUserDocFromUserData();
+  return userToClear.clearUserDocFromLongTermData(db, user.email);
 });
 
 exports.updateUserData = functions.https.onCall( (data, context) => {
@@ -65,10 +61,13 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
   }
 
   const userToUpdate = new UserModel();
-  userToUpdate.email = context.auth.token.email;
   userToUpdate.phoneNumber = data.phoneNumber;
   userToUpdate.fullName = data.fullName;
-  return userToUpdate.updateDocWithUserData(userToUpdate);
+  userToUpdate.company = data.company;
+  userToUpdate.subDepartment = data.subDepartment;
+  userToUpdate.jobRole = data.jobRole;
+  userToUpdate.userUid = context.auth.uid;
+  return userToUpdate.updateDocWithUserData(db, context.auth.token.email);
 });
 
 exports.getUserData = functions.https.onCall( (data, context) => {
@@ -79,7 +78,5 @@ exports.getUserData = functions.https.onCall( (data, context) => {
     );
   }
   const userToRead = new UserModel();
-  console.log(context.auth.token.email);
-  userToRead.email = context.auth.token.email;
-  return userToRead.getPrincipleDoc(db);
+  return userToRead.getPrincipleDoc(db, context.auth.token.email);
 });
