@@ -65,11 +65,12 @@ function Principle() {
   };
 
   this.createUserDocOrUpdateDocWithUserData = function(db) {
+    console.log("the doc id is:", this.email);
     return db
         .doc(`companies/skf/users/${this.email}`)
         .get()
         .then((snap) => {
-          const principle = snap.data();
+          const principle = new Principle().copyFromInstance(snap.data());
           principle.updateOnlyUserData(this.data());
           this.copyFromInstance(principle);
           this.savePrincipleDoc(db);
@@ -94,11 +95,12 @@ function Principle() {
   };
 
   this.clearUserDocFromUserData = function(db) {
+    console.log("the doc id is:", this.email);
     return db
         .doc(`companies/skf/users/${this.email}`)
-        .get(this.data())
+        .get()
         .then((snap) => {
-          const principle = snap.data();
+          const principle = new Principle().copyFromInstance(snap.data());
           principle.clearUserRelatedData(this.data());
           this.copyFromInstance(principle);
           this.updatePrincipleDoc(db);
