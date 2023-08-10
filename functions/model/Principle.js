@@ -78,7 +78,7 @@ function Principle() {
           const principle = new Principle().copyFromInstance(snap.data());
           principle.updateUserLongTerm(this.data());
           this.copyFromInstance(principle);
-          this.savePrincipleDoc(db, docId);
+          return this.savePrincipleDoc(db, docId);
         })
         .catch(() => {
           this.savePrincipleDoc(db, docId);
@@ -94,7 +94,7 @@ function Principle() {
           const principle = new Principle().copyFromInstance(snap.data());
           principle.updateUserLongTerm(this.data());
           this.copyFromInstance(principle);
-          this.savePrincipleDoc(db, docId);
+          return this.savePrincipleDoc(db, docId);
         })
         .catch((error) => {
           throw error;
@@ -111,7 +111,7 @@ function Principle() {
           this.enabled = principle.enabled;
           principle.updateUserInitialData(this.data());
           this.copyFromInstance(principle);
-          this.savePrincipleDoc(db, docId);
+          return this.savePrincipleDoc(db, docId);
         })
         .catch((error) => {
           throw error;
