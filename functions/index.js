@@ -64,9 +64,10 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
   userToUpdate.phoneNumber = data.phoneNumber;
   userToUpdate.fullName = data.fullName;
   userToUpdate.company = data.company;
+  userToUpdate.department = data.department;
   userToUpdate.subDepartment = data.subDepartment;
   userToUpdate.jobRole = data.jobRole;
-  userToUpdate.userUid = context.auth.uid;
+  userToUpdate.isEmailVerified = data.isEmailVerified;
   return userToUpdate.updateDocWithUserData(db, context.auth.token.email);
 });
 

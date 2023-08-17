@@ -16,6 +16,7 @@ function Principle() {
   this.jobRole = null;
   this.restApiUrl = null;
   this.userUid = null;
+  this.isEmailVerified = false;
   this.roles = null;
   this.accountNonExpired = false;
   this.accountNonLocked = false;
@@ -44,6 +45,7 @@ function Principle() {
     this.jobRole = instance.jobRole;
     this.restApiUrl = instance.restApiUrl;
     this.userUid = instance.userUid;
+    this.isEmailVerified = instance.isEmailVerified;
     this.roles = instance.roles;
     this.accountNonExpired = instance.accountNonExpired;
     this.accountNonLocked = instance.accountNonLocked;
@@ -59,14 +61,13 @@ function Principle() {
     this.department = instance.department;
     this.subDepartment = instance.subDepartment;
     this.jobRole = instance.jobRole;
-    this.userUid = instance.userUid;
-    this.enabled = instance.enabled;
+    this.isEmailVerified = instance.isEmailVerified;
     return this;
   };
 
   this.updateUserLongTerm = function(instance) {
     this.userUid = instance.userUid;
-    this.enabled = instance.enabled;
+    this.isEmailVerified = instance.isEmailVerified;
     return this;
   };
 
@@ -107,8 +108,18 @@ function Principle() {
         .get()
         .then((snap) => {
           const principle = new Principle().copyFromInstance(snap.data());
-          this.userUid = principle.userUid;
-          this.enabled = principle.enabled;
+          if (principle.company !== null) {
+            this.company = principle.company;
+          }
+          if (principle.department !== null) {
+            this.department = principle.department;
+          }
+          if (principle.subDepartment !== null) {
+            this.subDepartment = principle.subDepartment;
+          }
+          if (principle.jobRole !== null) {
+            this.jobRole = principle.jobRole;
+          }
           principle.updateUserInitialData(this.data());
           this.copyFromInstance(principle);
           return this.savePrincipleDoc(db, docId);
