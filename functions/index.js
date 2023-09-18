@@ -6,11 +6,11 @@ const {
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
 const UserModel = require("./model/Principle");
+const FcmTokenModel = require("./model/FcmToken");
 // const {getAuth} = require("firebase-admin/auth");
 
 admin.initializeApp();
 const db = admin.firestore();
-// const superUserUid = "seNJ7oCrP0SS5Eb3iakOA1oYpNi1";
 
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
@@ -52,7 +52,7 @@ exports.userDeleted = functions.auth.user().onDelete((user) => {
   return userToClear.clearUserDocFromLongTermData(db, user.email);
 });
 
-exports.updateUserData = functions.https.onCall( (data, context) => {
+exports.updateUserData = functions.https.onCall((data, context) => {
   if (!context.auth.uid) {
     throw new functions.https.HttpsError(
         "unauthenticated",
@@ -71,7 +71,7 @@ exports.updateUserData = functions.https.onCall( (data, context) => {
   return userToUpdate.updateDocWithUserData(db, context.auth.token.email);
 });
 
-exports.getUserData = functions.https.onCall( (data, context) => {
+exports.getUserData = functions.https.onCall((data, context) => {
   if (!context.auth.uid) {
     throw new functions.https.HttpsError(
         "unauthenticated",
@@ -81,3 +81,84 @@ exports.getUserData = functions.https.onCall( (data, context) => {
   const userToRead = new UserModel();
   return userToRead.getPrincipleDoc(db, context.auth.token.email);
 });
+
+exports.createFcmToken = functions.https.onCall((data, context) => {
+  if (!context.auth.uid) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "only authenticated users can add request",
+    );
+  }
+  if (context.auth.token.email !== data.fcmEmail) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "user is not the same as in the request",
+    );
+  }
+  const fcmTokenToSave = new FcmTokenModel();
+  fcmTokenToSave.fcmEmail = data.fcmEmail;
+  fcmTokenToSave.fcmToken = data.fcmToken;
+  console.log(fcmTokenToSave);
+  return fcmTokenToSave.saveFcmTokenDoc(db, data.fcmTimeStamp);
+});
+
+exports.deleteFcmToken = functions.https.onCall((data, context) => {
+  if (!context.auth.uid) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "only authenticated users can add request",
+    );
+  }
+  const fcmTokenToSave = new FcmTokenModel();
+  fcmTokenToSave.fcmEmail = data.fcmEmail;
+  fcmTokenToSave.fcmToken = data.fcmToken;
+  return fcmTokenToSave.deleteFcmTokenDoc(db, data.fcmTimeStamp);
+});
+
+const {getAuth} = require("firebase-admin/auth");
+const axios = require("axios");
+const urlNU = "https://qualityappspring.azurewebsites.net/api/v1/skf/firebase/notifyNewUserIsRegistered";
+const signInApiUrl = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=";
+const firebaseProjectWebKey = "AIzaSyDgDklgkFPQCYh1abTGILRJtC6eZoOjOrk";
+const adminUserEmail = "romansemenyshyn@gmail.com";
+
+exports.onUserVerifiedEmail = functions
+    .firestore.document("companies/skf/users/{isEmailVerified}")
+    .onUpdate((snap, context) => {
+      const oldUserData = snap.before.data();
+      const userData = snap.after.data();
+
+      if (
+        oldUserData.isEmailVerified === false &&
+          userData.isEmailVerified === true &&
+          userData.teamMemberId === -1
+      ) {
+        let tokenId = "";
+        return getAuth().getUserByEmail(adminUserEmail)
+            .then((userRecord) => {
+              getAuth().createCustomToken(userRecord.uid)
+                  .then((customToken) => {
+                    axios.post(signInApiUrl + firebaseProjectWebKey,
+                        {token: customToken, returnSecureToken: true})
+                        .then((response) => {
+                          tokenId = response.data.idToken;
+                          console.log("adminUser token is: ", tokenId);
+
+                          const config = {
+                            headers: {Authorization: `Bearer ${tokenId}`},
+                          };
+
+                          axios.get(`${urlNU}/${snap.after.id}`, config)
+                              .then((response) => {
+                                console.log("status is: ", response.status);
+                                console.log("data is: ", response.data);
+                              })
+                              .catch((error) => {
+                                console.log("error is: ", error.response.data);
+                              });
+                        },
+                        );
+                  });
+            });
+      }
+    });
