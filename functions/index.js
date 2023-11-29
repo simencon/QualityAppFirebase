@@ -160,5 +160,7 @@ exports.onUserVerifiedEmail = functions
                         );
                   });
             });
+      } else {
+        return "nothing to notify";
       }
     });
