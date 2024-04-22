@@ -119,7 +119,7 @@ const {getAuth} = require("firebase-admin/auth");
 const axios = require("axios");
 const urlNU = "https://qualityappspring.azurewebsites.net/api/v1/skf/firebase/notifyNewUserIsRegistered";
 const signInApiUrl = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=";
-const firebaseProjectWebKey = "AIzaSyA0f7d-P8wv_kG9lYFYbuNA2uE4abR07CE";
+const firebaseProjectWebKey = "AIzaSyAVbjkVHq7Cyh1YWqWxbCJRQdGh_2pArsQ";
 const adminUserEmail = "romansemenyshyn@gmail.com";
 
 exports.onUserVerifiedEmail = functions
