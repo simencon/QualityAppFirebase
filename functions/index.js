@@ -12,6 +12,32 @@ const FcmTokenModel = require("./model/FcmToken");
 admin.initializeApp();
 const db = admin.firestore();
 
+exports.sendNotificationCampaign = functions.firestore
+    .document("posts/{postId}")
+    .onUpdate(async (snapshot, context) => {
+      const postData = snapshot.after.data();
+      const message = {
+        data: {
+          title: postData.title,
+          body: postData.message,
+          email: postData.email,
+          action: postData.action,
+        },
+        apns: {
+
+        },
+        topic: postData.topic,
+      };
+      try {
+        const response = await admin.messaging().send(message);
+        console.log("Notification sent successfully:", response);
+        console.log(message);
+      } catch (error) {
+        console.error("Error sending notification:", error);
+      }
+    });
+
+
 exports.validatenewuser = beforeUserCreated(async (event) => {
   const company = "skf";
   const email = event.data.email || "";
